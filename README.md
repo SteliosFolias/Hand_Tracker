@@ -23,7 +23,7 @@ Install dependencies:
 
 ```bash
 pip install opencv-python mediapipe pyautogui
-pyinstaller hand_tracker.spec
+py installer hand_tracker.spec
 ```
 
 
