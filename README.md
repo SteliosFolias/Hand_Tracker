@@ -16,7 +16,7 @@ Control your mouse cursor using your hand gestures via your webcam — no GUI, j
 
 ## 🛠️ Requirements
 
-- Python 3.10 or later  
+- Python 3.10 or later  (https://www.python.org/downloads/windows/) 
 - Webcam
 
 Install dependencies:
