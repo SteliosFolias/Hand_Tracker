@@ -2,7 +2,6 @@ import cv2
 import mediapipe as mp
 import pyautogui
 import time
-import math
 
 pyautogui.FAILSAFE = False
 
@@ -12,19 +11,18 @@ screen_w, screen_h = pyautogui.size()
 cap = cv2.VideoCapture(0)
 
 # Settings
-click_delay = 0.6  # delay between allowed clicks
-gesture_hold_time = 0.3  # how long gesture must persist
-move_threshold = 25  # pixels to ignore small hand shakes
+click_delay = 0.3
+move_threshold = 28          # <--- Consider increasing this value further
+gesture_hold_time = 0.3
 
 # State
 prev_x, prev_y = None, None
 last_left_click = 0
-last_right_click = 0
 gesture_start_time = None
-gesture_type = None  # 'left' or 'right'
+gesture_active = False
 
-def get_distance(p1, p2):
-    return math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2)
+def finger_is_up(lm, tip_idx, pip_idx):
+    return lm[tip_idx].y < lm[pip_idx].y
 
 try:
     while True:
@@ -36,52 +34,57 @@ try:
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = hands.process(rgb)
 
+        now = time.time()
+
         if results.multi_hand_landmarks:
             hand = results.multi_hand_landmarks[0]
             lm = hand.landmark
 
-            index_tip = lm[mp_hands.HandLandmark.INDEX_FINGER_TIP]
-            thumb_tip = lm[mp_hands.HandLandmark.THUMB_TIP]
-            middle_tip = lm[mp_hands.HandLandmark.MIDDLE_FINGER_TIP]
+            # Check finger states for thumbs-up gesture
+            thumb_up = finger_is_up(lm, mp_hands.HandLandmark.THUMB_TIP, mp_hands.HandLandmark.THUMB_IP)
+            index_up = finger_is_up(lm, mp_hands.HandLandmark.INDEX_FINGER_TIP, mp_hands.HandLandmark.INDEX_FINGER_PIP)
+            middle_up = finger_is_up(lm, mp_hands.HandLandmark.MIDDLE_FINGER_TIP, mp_hands.HandLandmark.MIDDLE_FINGER_PIP)
+            ring_up = finger_is_up(lm, mp_hands.HandLandmark.RING_FINGER_TIP, mp_hands.HandLandmark.RING_FINGER_PIP)
+            pinky_up = finger_is_up(lm, mp_hands.HandLandmark.PINKY_TIP, mp_hands.HandLandmark.PINKY_PIP)
 
-            now = time.time()
+            # Thumbs up gesture: thumb up, all other fingers down
+            is_thumbs_up = thumb_up and not (index_up or middle_up or ring_up or pinky_up)
 
-            dist_index_thumb = get_distance(index_tip, thumb_tip)
-            dist_middle_thumb = get_distance(middle_tip, thumb_tip)
-
-            # Check for gesture
-            new_gesture = None
-            if dist_index_thumb < 0.045:
-                new_gesture = 'left'
-            elif dist_middle_thumb < 0.045:
-                new_gesture = 'right'
-
-            # Handle gesture hold
-            if new_gesture:
-                if gesture_type != new_gesture:
-                    gesture_type = new_gesture
+            if is_thumbs_up:
+                if not gesture_active:
+                    gesture_active = True
                     gesture_start_time = now
-                elif now - gesture_start_time >= gesture_hold_time:
-                    if new_gesture == 'left' and now - last_left_click >= click_delay:
-                        pyautogui.click(button='left')
-                        last_left_click = now
-                        gesture_type = None  # reset
-                    elif new_gesture == 'right' and now - last_right_click >= click_delay:
-                        pyautogui.click(button='right')
-                        last_right_click = now
-                        gesture_type = None  # reset
+                else:
+                    held_time = now - gesture_start_time
+                    if held_time >= gesture_hold_time:
+                        if now - last_left_click >= click_delay:
+                            pyautogui.click(button='left')
+                            last_left_click = now
+                            print("Single click!")
             else:
-                gesture_type = None
+                gesture_active = False
                 gesture_start_time = None
 
-            # Only move mouse if not trying to click
-            if gesture_type is None:
-                cx = int(index_tip.x * screen_w)
-                cy = int(index_tip.y * screen_h)
+            # Move mouse with index finger tip only if no active click gesture
+            # This is the crucial part that limits movement when gesture_active is True
+            if not gesture_active:
+                cx = int(lm[mp_hands.HandLandmark.INDEX_FINGER_TIP].x * screen_w)
+                cy = int(lm[mp_hands.HandLandmark.INDEX_FINGER_TIP].y * screen_h)
 
+                # Only move if the change in position is greater than the threshold
                 if prev_x is None or abs(cx - prev_x) > move_threshold or abs(cy - prev_y) > move_threshold:
                     pyautogui.moveTo(cx, cy)
                     prev_x, prev_y = cx, cy
+
+        else:
+            # No hand detected, reset everything
+            gesture_active = False
+            gesture_start_time = None
+
+        # Optional: show frame if you want visual feedback
+        # cv2.imshow('Hand Tracking', frame)
+        # if cv2.waitKey(1) & 0xFF == 27:
+        #     break
 
 except KeyboardInterrupt:
     print("Exiting...")
