@@ -7,9 +7,8 @@ Control your mouse cursor using your hand gestures via your webcam — no GUI, j
 
 ## 🔧 Features
 
-- Move your mouse with your **index finger**.
-- Perform a **left click** by pinching your **thumb and index finger** for ~0.3s.
-- Perform a **right click** by pinching your **thumb and middle finger** for ~0.3s.
+- Move your mouse with your **hand**.
+- 👍 **Left-click** with a thumbs-up gesture (thumb up, all other fingers down)
 - Cursor movement is **smoothed** to avoid jitter.
 - **Failsafe-free**, safe for edge-of-screen usage.
 - Runs silently in the background (console-free mode possible).
