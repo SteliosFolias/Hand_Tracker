@@ -10,6 +10,12 @@ hands = mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.75)
 screen_w, screen_h = pyautogui.size()
 cap = cv2.VideoCapture(0)
 
+if not cap.isOpened():   
+  print("Error: Could not open camera")  
+  exit() 
+else:     
+  print("camera connected")
+  
 # Settings
 click_delay = 0.3
 move_threshold = 28          # <--- Consider increasing this value further
@@ -50,7 +56,11 @@ try:
             # Thumbs up gesture: thumb up, all other fingers down
             is_thumbs_up = thumb_up and not (index_up or middle_up or ring_up or pinky_up)
 
-            if is_thumbs_up:
+            #is_thumbs_up = thumb_up and not (index_up or middle_up or ring_up or pinky_up)
+            is_thumbs_down = (index_up and middle_up and ring_up and pinky_up) and not thumb_up 
+            print("is_thumbs_down",is_thumbs_down)
+            
+            if is_thumbs_down:
                 if not gesture_active:
                     gesture_active = True
                     gesture_start_time = now
